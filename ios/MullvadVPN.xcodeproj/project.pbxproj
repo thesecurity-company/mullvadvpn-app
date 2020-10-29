@@ -104,6 +104,7 @@
 		586BD68322B7BBD800BB7F9F /* NetworkExtension.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 586BD68222B7BBD800BB7F9F /* NetworkExtension.framework */; };
 		586BD68422B7BBE400BB7F9F /* NetworkExtension.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 586BD68222B7BBD800BB7F9F /* NetworkExtension.framework */; };
 		5871FB8325498CA20051A0A4 /* Swizzle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5871FB8225498CA20051A0A4 /* Swizzle.swift */; };
+		5871FB96254ADE4E0051A0A4 /* ProblemReport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5871FB95254ADE4E0051A0A4 /* ProblemReport.swift */; };
 		58723E7522A54CB2009837F5 /* libwg-go.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 58723E7422A54C63009837F5 /* libwg-go.a */; };
 		5873884D239E6D7E00E96C4E /* EmbeddedViewContainerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5873884C239E6D7E00E96C4E /* EmbeddedViewContainerView.swift */; };
 		587425C12299833500CA2045 /* RootContainerViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 587425C02299833500CA2045 /* RootContainerViewController.swift */; };
@@ -316,6 +317,7 @@
 		5868585424054096000B8131 /* AppButton.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AppButton.swift; sourceTree = "<group>"; };
 		586BD68222B7BBD800BB7F9F /* NetworkExtension.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = NetworkExtension.framework; path = System/Library/Frameworks/NetworkExtension.framework; sourceTree = SDKROOT; };
 		5871FB8225498CA20051A0A4 /* Swizzle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Swizzle.swift; sourceTree = "<group>"; };
+		5871FB95254ADE4E0051A0A4 /* ProblemReport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProblemReport.swift; sourceTree = "<group>"; };
 		58723E7422A54C63009837F5 /* libwg-go.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = "libwg-go.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		5873884C239E6D7E00E96C4E /* EmbeddedViewContainerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmbeddedViewContainerView.swift; sourceTree = "<group>"; };
 		587425C02299833500CA2045 /* RootContainerViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootContainerViewController.swift; sourceTree = "<group>"; };
@@ -603,6 +605,7 @@
 				580EE1FF24B3218800F9D8A1 /* Operations */,
 				583BC70624FE4DC400C9DE04 /* Optional+DispatchQueue.swift */,
 				5845F841236CBACD00B2D93C /* PacketTunnelIpc.swift */,
+				5871FB95254ADE4E0051A0A4 /* ProblemReport.swift */,
 				58293FAC2510CA58005D0BB5 /* ProblemReportViewController.swift */,
 				58BFA5C522A7C97F00A6173D /* RelayCache.swift */,
 				58781CC822AE7CA8009B9D8E /* RelayConstraints.swift */,
@@ -998,6 +1001,7 @@
 				582BB1B1229569620055B6EF /* CustomNavigationBar.swift in Sources */,
 				588D2FE3248AC27F00E313F7 /* AsyncOperation.swift in Sources */,
 				5877153023981F7B001F8237 /* WireguardKeysViewController.swift in Sources */,
+				5871FB96254ADE4E0051A0A4 /* ProblemReport.swift in Sources */,
 				58FAEDEF245069C700CB0F5B /* KeychainAttributes.swift in Sources */,
 				58C6B35422BB87C4003C19AD /* WireguardPrivateKey.swift in Sources */,
 				58CB0EE024B86751001EF0D8 /* MullvadRest.swift in Sources */,
