@@ -347,6 +347,10 @@ struct MullvadRest {
     func createApplePayment() -> RestSessionEndpoint<TokenPayload<CreateApplePaymentRequest>, CreateApplePaymentResponse> {
         return RestSessionEndpoint(session: session, endpoint: Self.createApplePayment())
     }
+
+    func sendProblemReport() -> RestSessionEndpoint<ProblemReportRequest, EmptyResponse> {
+        return RestSessionEndpoint(session: session, endpoint: Self.sendProblemReport())
+    }
 }
 
 extension MullvadRest {
@@ -409,6 +413,13 @@ extension MullvadRest {
     static func createApplePayment() -> RestEndpoint<TokenPayload<CreateApplePaymentRequest>, CreateApplePaymentResponse> {
         return RestEndpoint(
             endpointURL: kRestBaseURL.appendingPathComponent("create-apple-payment"),
+            httpMethod: .post
+        )
+    }
+
+    static func sendProblemReport() -> RestEndpoint<ProblemReportRequest, EmptyResponse> {
+        return RestEndpoint(
+            endpointURL: kRestBaseURL.appendingPathComponent("problem-report"),
             httpMethod: .post
         )
     }
@@ -549,4 +560,11 @@ struct CreateApplePaymentResponse: Decodable, RestResponse {
 
         return formatter.string(from: TimeInterval(timeAdded))
     }
+}
+
+struct ProblemReportRequest: Encodable, RestPayload {
+    let address: String
+    let message: String
+    let log: String
+    let metadata: [String: String]
 }
