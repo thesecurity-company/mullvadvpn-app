@@ -12,10 +12,12 @@ import kotlinx.coroutines.channels.ClosedReceiveChannelException
 import kotlinx.coroutines.channels.actor
 import kotlinx.coroutines.channels.sendBlocking
 import net.mullvad.mullvadvpn.util.Intermittent
+import net.mullvad.talpid.ConnectivityListener
 
 class ServiceHandler(
     looper: Looper,
-    val intermittentDaemon: Intermittent<MullvadDaemon>
+    val intermittentDaemon: Intermittent<MullvadDaemon>,
+    connectivityListener: ConnectivityListener
 ) : Handler(looper) {
     private val listeners = mutableListOf<Messenger>()
     private val registrationQueue = startRegistrator()
@@ -25,6 +27,9 @@ class ServiceHandler(
             sendEvent(Event.SettingsUpdate(settings))
         }
     }
+
+    val locationInfoCache =
+        LocationInfoCache(connectivityListener, settingsListener, intermittentDaemon)
 
     override fun handleMessage(message: Message) {
         val request = Request.fromMessage(message)
@@ -37,6 +42,7 @@ class ServiceHandler(
     fun onDestroy() {
         registrationQueue.close()
 
+        locationInfoCache.onDestroy()
         settingsListener.onDestroy()
     }
 
