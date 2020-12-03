@@ -49,7 +49,7 @@ class WireguardKeysViewController: UIViewController, TunnelObserver {
         navigationItem.title = NSLocalizedString("WireGuard key", comment: "Navigation title")
 
         TunnelManager.shared.addObserver(self)
-        updatePublicKey(publicKey: TunnelManager.shared.publicKey, animated: false)
+        updatePublicKey(publicKey: TunnelManager.shared.publicKeyMetadata, animated: false)
 
         startPublicKeyPeriodicUpdate()
     }
@@ -58,7 +58,7 @@ class WireguardKeysViewController: UIViewController, TunnelObserver {
         let interval = DispatchTimeInterval.seconds(kCreationDateRefreshInterval)
         let timerSource = DispatchSource.makeTimerSource(queue: .main)
         timerSource.setEventHandler { [weak self] () -> Void in
-            let publicKey = TunnelManager.shared.publicKey
+            let publicKey = TunnelManager.shared.publicKeyMetadata
 
             self?.updatePublicKey(publicKey: publicKey, animated: true)
         }
@@ -74,7 +74,7 @@ class WireguardKeysViewController: UIViewController, TunnelObserver {
         // no-op
     }
 
-    func tunnelPublicKeyDidChange(publicKey: WireguardPublicKey?) {
+    func tunnelPublicKeyDidChange(publicKey: PublicKeyMetadata?) {
         DispatchQueue.main.async {
             self.updatePublicKey(publicKey: publicKey, animated: true)
         }
@@ -83,7 +83,7 @@ class WireguardKeysViewController: UIViewController, TunnelObserver {
     // MARK: - IBActions
 
     @IBAction func copyPublicKey(_ sender: Any) {
-        guard let publicKey = TunnelManager.shared.publicKey else { return }
+        guard let publicKey = TunnelManager.shared.publicKeyMetadata else { return }
 
         UIPasteboard.general.string = publicKey.stringRepresentation()
 
@@ -92,7 +92,7 @@ class WireguardKeysViewController: UIViewController, TunnelObserver {
             animated: true)
 
         let dispatchWork = DispatchWorkItem { [weak self] in
-            let publicKey = TunnelManager.shared.publicKey
+            let publicKey = TunnelManager.shared.publicKeyMetadata
 
             self?.updatePublicKey(publicKey: publicKey, animated: true)
         }
@@ -127,7 +127,7 @@ class WireguardKeysViewController: UIViewController, TunnelObserver {
         creationDateLabel.text = formatKeyGenerationElapsedTime(with: creationDate) ?? "-"
     }
 
-    private func updatePublicKey(publicKey: WireguardPublicKey?, animated: Bool) {
+    private func updatePublicKey(publicKey: PublicKeyMetadata?, animated: Bool) {
         if let publicKey = publicKey {
             let displayKey = publicKey
                 .stringRepresentation(maxLength: kDisplayPublicKeyMaxLength)

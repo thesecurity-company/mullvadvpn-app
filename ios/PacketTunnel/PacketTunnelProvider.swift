@@ -10,6 +10,7 @@ import Foundation
 import Network
 import NetworkExtension
 import Logging
+import WireGuardKit
 
 class PacketTunnelProvider: NEPacketTunnelProvider {
 
@@ -19,6 +20,9 @@ class PacketTunnelProvider: NEPacketTunnelProvider {
 
     /// Tunnel provider logger
     private let logger: Logger
+
+    /// WireGuard adapter logger
+    private let wgAdapterLogger: Logger
 
     /// Current tunnel state
     private var tunnelState: PacketTunnelState = .disconnected {
@@ -36,6 +40,12 @@ class PacketTunnelProvider: NEPacketTunnelProvider {
         return operationQueue
     }()
 
+    private lazy var wgAdapter: WireGuardAdapter = {
+        return WireGuardAdapter(with: self, logHandler: { [weak self] (logLevel, message) in
+            self?.wgAdapterLogger.log(level: logLevel.loggerLevel, "\(message)")
+        })
+    }()
+
     private lazy var exclusivityController: ExclusivityController<OperationCategory> = {
         return ExclusivityController(operationQueue: self.operationQueue)
     }()
@@ -44,9 +54,7 @@ class PacketTunnelProvider: NEPacketTunnelProvider {
         initLoggingSystem(bundleIdentifier: Bundle.main.bundleIdentifier!)
 
         logger = Logger(label: "PacketTunnelProvider")
-
-        let wireguardLogger = Logger(label: "WireGuard")
-        WireguardDevice.setTunnelLogger(wireguardLogger)
+        wgAdapterLogger = Logger(label: "WireGuard")
     }
 
     // MARK: - Subclass
@@ -142,19 +150,11 @@ class PacketTunnelProvider: NEPacketTunnelProvider {
 
             self.tunnelState = .connecting(packetTunnelConfig.selectorResult.tunnelConnectionInfo)
 
-            self.updateNetworkSettings(packetTunnelConfig: packetTunnelConfig) { (result) in
-                guard case .success = result else {
-                    self.tunnelState = .disconnected
-
-                    completionHandler(result)
-                    return
-                }
-
-                self.startWireguardDevice(packetFlow: self.packetFlow, configuration: packetTunnelConfig.wireguardConfig) { (result) in
-                    guard case .success(let device) = result else {
+            self.wgAdapter.start(tunnelConfiguration: packetTunnelConfig.wgTunnelConfig) { (error) in
+                self.dispatchQueue.async {
+                    if let error = error {
                         self.tunnelState = .disconnected
-
-                        completionHandler(result.map { _ in () })
+                        completionHandler(.failure(.startWireguardDevice(error)))
                         return
                     }
 
@@ -177,7 +177,7 @@ class PacketTunnelProvider: NEPacketTunnelProvider {
                     RelayCache.shared.startPeriodicUpdates(queue: self.dispatchQueue) {
                         keyRotationManager.startAutomaticRotation(queue: self.dispatchQueue) {
                             let context = PacketTunnelContext(
-                                wireguardDevice: device,
+                                wgAdapter: self.wgAdapter,
                                 keyRotationManager: keyRotationManager
                             )
 
@@ -202,14 +202,16 @@ class PacketTunnelProvider: NEPacketTunnelProvider {
 
         RelayCache.shared.stopPeriodicUpdates(queue: self.dispatchQueue) {
             context.keyRotationManager.stopAutomaticRotation(queue: self.dispatchQueue) {
-                context.wireguardDevice.stop(queue: self.dispatchQueue) { (result) in
-                    let result = result.mapError({ (error) -> PacketTunnelProviderError in
-                        return .stopWireguardDevice(error)
-                    })
+                context.wgAdapter.stop { (error) in
+                    self.dispatchQueue.async {
+                        self.tunnelState = .disconnected
 
-                    self.tunnelState = .disconnected
-
-                    completionHandler(result)
+                        if let error = error {
+                            completionHandler(.failure(.stopWireguardDevice(error)))
+                        } else {
+                            completionHandler(.success(()))
+                        }
+                    }
                 }
             }
         }
@@ -237,9 +239,6 @@ class PacketTunnelProvider: NEPacketTunnelProvider {
 
             self.tunnelState = .reconnecting(packetTunnelConfig.selectorResult.tunnelConnectionInfo, context)
 
-            // Tell the system that the tunnel is about to reconnect with the new endpoint
-            self.reasserting = true
-
             let finishReconnecting = { (result: Result<(), PacketTunnelProviderError>) in
                 switch result {
                 case .success:
@@ -254,14 +253,13 @@ class PacketTunnelProvider: NEPacketTunnelProvider {
                 completionHandler(result)
             }
 
-            self.updateNetworkSettings(packetTunnelConfig: packetTunnelConfig) { (result) in
-                guard case .success = result else {
-                    finishReconnecting(result)
-                    return
-                }
-
-                context.wireguardDevice.setConfiguration(packetTunnelConfig.wireguardConfig, queue: self.dispatchQueue) { (result) in
-                    finishReconnecting(result.mapError { PacketTunnelProviderError.updateWireguardConfiguration($0) })
+            context.wgAdapter.update(tunnelConfiguration: packetTunnelConfig.wgTunnelConfig) { (error) in
+                self.dispatchQueue.async {
+                    if let error = error {
+                        finishReconnecting(.failure(.updateWireguardConfiguration(error)))
+                    } else {
+                        finishReconnecting(.success(()))
+                    }
                 }
             }
         }
@@ -295,29 +293,6 @@ class PacketTunnelProvider: NEPacketTunnelProvider {
 
         Self.makePacketTunnelConfig(keychainReference: keychainReference, queue: self.dispatchQueue) { (result) in
             completionHandler(result)
-        }
-    }
-
-    private func updateNetworkSettings(packetTunnelConfig: PacketTunnelConfiguration, completionHandler: @escaping (Result<(), PacketTunnelProviderError>) -> Void) {
-        let settingsGenerator = PacketTunnelSettingsGenerator(
-            mullvadEndpoint: packetTunnelConfig.selectorResult.endpoint,
-            tunnelSettings: packetTunnelConfig.tunnelSettings
-        )
-
-        logger.info("Updating network settings...")
-
-        setTunnelNetworkSettings(settingsGenerator.networkSettings()) { (error) in
-            self.dispatchQueue.async {
-                if let error = error {
-                    self.logger.error("Cannot update network settings: \(error.localizedDescription)")
-
-                    completionHandler(.failure(.setNetworkSettings(error)))
-                } else {
-                    self.logger.info("Updated network settings")
-
-                    completionHandler(.success(()))
-                }
-            }
         }
     }
 
@@ -383,26 +358,6 @@ class PacketTunnelProvider: NEPacketTunnelProvider {
             }
         }
     }
-
-    private func startWireguardDevice(packetFlow: NEPacketTunnelFlow, configuration: WireguardConfiguration, completionHandler: @escaping (Result<WireguardDevice, PacketTunnelProviderError>) -> Void) {
-        let result = WireguardDevice.fromPacketFlow(packetFlow)
-
-        guard case .success(let device) = result else {
-            completionHandler(result.mapError { PacketTunnelProviderError.startWireguardDevice($0) })
-            return
-        }
-
-        let tunnelDeviceName = device.getInterfaceName() ?? "unknown"
-
-        logger.info("Tunnel interface is \(tunnelDeviceName)")
-
-        device.start(queue: dispatchQueue, configuration: configuration) { (result) in
-            let result = result.map { device }
-                .mapError { PacketTunnelProviderError.startWireguardDevice($0) }
-
-            completionHandler(result)
-        }
-    }
 }
 
 enum PacketTunnelProviderError: ChainedError {
@@ -425,13 +380,13 @@ enum PacketTunnelProviderError: ChainedError {
     case setNetworkSettings(Error)
 
     /// Failure to start the Wireguard backend
-    case startWireguardDevice(WireguardDevice.Error)
+    case startWireguardDevice(WireGuardAdapterError)
 
     /// Failure to stop the Wireguard backend
-    case stopWireguardDevice(WireguardDevice.Error)
+    case stopWireguardDevice(WireGuardAdapterError)
 
     /// Failure to update the Wireguard configuration
-    case updateWireguardConfiguration(Error)
+    case updateWireguardConfiguration(WireGuardAdapterError)
 
     /// IPC handler failure
     case ipcHandler(PacketTunnelIpcHandler.Error)
@@ -478,33 +433,37 @@ struct PacketTunnelConfiguration {
 }
 
 extension PacketTunnelConfiguration {
-    var wireguardConfig: WireguardConfiguration {
+
+    var wgTunnelConfig: TunnelConfiguration {
         let mullvadEndpoint = selectorResult.endpoint
         var peers: [AnyIPEndpoint] = [.ipv4(mullvadEndpoint.ipv4Relay)]
-
         if let ipv6Relay = mullvadEndpoint.ipv6Relay {
             peers.append(.ipv6(ipv6Relay))
         }
 
-        let wireguardPeers = peers.map {
-            WireguardPeer(
-                endpoint: $0,
-                publicKey: selectorResult.endpoint.publicKey)
+        let peerConfigs = peers.map { (endpoint) -> PeerConfiguration in
+            let pubKey = PublicKey(rawValue: selectorResult.endpoint.publicKey)!
+            var peerConfig = PeerConfiguration(publicKey: pubKey)
+            peerConfig.endpoint = endpoint.wgEndpoint
+            peerConfig.allowedIPs = [
+                IPAddressRange(from: "0.0.0.0/0")!,
+                IPAddressRange(from: "::/0")!
+            ]
+            return peerConfig
         }
 
-        return WireguardConfiguration(
-            privateKey: tunnelSettings.interface.privateKey,
-            peers: wireguardPeers,
-            allowedIPs: [
-                IPAddressRange(address: IPv4Address.any, networkPrefixLength: 0),
-                IPAddressRange(address: IPv6Address.any, networkPrefixLength: 0)
-            ]
-        )
+        let dnsServers: [IPAddress] = [mullvadEndpoint.ipv4Gateway, mullvadEndpoint.ipv6Gateway]
+        var interfaceConfig = InterfaceConfiguration(privateKey: tunnelSettings.interface.privateKey.privateKey)
+        interfaceConfig.listenPort = 0
+        interfaceConfig.dns = dnsServers.map { DNSServer(address: $0) }
+        interfaceConfig.addresses = tunnelSettings.interface.addresses
+
+        return TunnelConfiguration(name: nil, interface: interfaceConfig, peers: peerConfigs)
     }
 }
 
 struct PacketTunnelContext {
-    let wireguardDevice: WireguardDevice
+    let wgAdapter: WireGuardAdapter
     let keyRotationManager: AutomaticKeyRotationManager
 }
 
@@ -603,3 +562,15 @@ extension RelaySelectorResult {
     }
 }
 
+extension WireGuardLogLevel {
+    var loggerLevel: Logger.Level {
+        switch self {
+        case .debug:
+            return .debug
+        case .info:
+            return .info
+        case .error:
+            return .error
+        }
+    }
+}
