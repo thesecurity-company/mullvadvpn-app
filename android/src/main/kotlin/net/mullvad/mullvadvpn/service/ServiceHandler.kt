@@ -29,7 +29,11 @@ class ServiceHandler(
     }
 
     val locationInfoCache =
-        LocationInfoCache(connectivityListener, settingsListener, intermittentDaemon)
+        LocationInfoCache(connectivityListener, settingsListener, intermittentDaemon).apply {
+            onNewLocation = { location ->
+                sendEvent(Event.NewLocation(location))
+            }
+        }
 
     override fun handleMessage(message: Message) {
         val request = Request.fromMessage(message)
