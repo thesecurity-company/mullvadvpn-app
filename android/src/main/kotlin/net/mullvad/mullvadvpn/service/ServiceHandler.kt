@@ -42,6 +42,8 @@ class ServiceHandler(
 
         when (request) {
             is Request.RegisterListener -> registrationQueue.sendBlocking(message.replyTo)
+            is Request.WireGuardGenerateKey -> keyStatusListener.generateKey()
+            is Request.WireGuardVerifyKey -> keyStatusListener.verifyKey()
         }
     }
 
