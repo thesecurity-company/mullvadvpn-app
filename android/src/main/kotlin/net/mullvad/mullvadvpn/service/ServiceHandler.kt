@@ -28,6 +28,8 @@ class ServiceHandler(
         }
     }
 
+    val keyStatusListener = KeyStatusListener(intermittentDaemon)
+
     val locationInfoCache =
         LocationInfoCache(connectivityListener, settingsListener, intermittentDaemon).apply {
             onNewLocation = { location ->
@@ -46,6 +48,7 @@ class ServiceHandler(
     fun onDestroy() {
         registrationQueue.close()
 
+        keyStatusListener.onDestroy()
         locationInfoCache.onDestroy()
         settingsListener.onDestroy()
     }
