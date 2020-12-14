@@ -20,7 +20,11 @@ class ServiceHandler(
     private val listeners = mutableListOf<Messenger>()
     private val registrationQueue = startRegistrator()
 
-    val settingsListener = SettingsListener(intermittentDaemon)
+    val settingsListener = SettingsListener(intermittentDaemon).apply {
+        subscribe(this@ServiceHandler) { settings ->
+            sendEvent(Event.SettingsUpdate(settings))
+        }
+    }
 
     override fun handleMessage(message: Message) {
         val request = Request.fromMessage(message)
