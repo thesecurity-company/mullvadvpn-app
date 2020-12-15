@@ -28,7 +28,11 @@ class ServiceHandler(
         }
     }
 
-    val keyStatusListener = KeyStatusListener(intermittentDaemon)
+    val keyStatusListener = KeyStatusListener(intermittentDaemon).apply {
+        onKeyStatusChange.subscribe(this@ServiceHandler) { keyStatus ->
+            sendEvent(Event.WireGuardKeyStatus(keyStatus))
+        }
+    }
 
     val locationInfoCache =
         LocationInfoCache(connectivityListener, settingsListener, intermittentDaemon).apply {
