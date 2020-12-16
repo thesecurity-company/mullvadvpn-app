@@ -29,6 +29,10 @@ class ServiceHandler(
     }
 
     val accountCache = AccountCache(settingsListener, intermittentDaemon).apply {
+        onAccountHistoryChange.subscribe(this@ServiceHandler) { history ->
+            sendEvent(Event.AccountHistory(history))
+        }
+
         onLoginStatusChange.subscribe(this@ServiceHandler) { status ->
             sendEvent(Event.LoginStatus(status))
         }
@@ -100,6 +104,7 @@ class ServiceHandler(
 
         listener.apply {
             send(Event.LoginStatus(accountCache.onLoginStatusChange.latestEvent).message)
+            send(Event.AccountHistory(accountCache.onAccountHistoryChange.latestEvent).message)
             send(Event.SettingsUpdate(settingsListener.settings).message)
             send(Event.NewLocation(locationInfoCache.location).message)
             send(Event.WireGuardKeyStatus(keyStatusListener.keyStatus).message)
