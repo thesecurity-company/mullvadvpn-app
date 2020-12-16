@@ -28,6 +28,8 @@ class ServiceHandler(
         }
     }
 
+    val accountCache = AccountCache(settingsListener, intermittentDaemon)
+
     val keyStatusListener = KeyStatusListener(intermittentDaemon).apply {
         onKeyStatusChange.subscribe(this@ServiceHandler) { keyStatus ->
             sendEvent(Event.WireGuardKeyStatus(keyStatus))
@@ -54,6 +56,7 @@ class ServiceHandler(
     fun onDestroy() {
         registrationQueue.close()
 
+        accountCache.onDestroy()
         keyStatusListener.onDestroy()
         locationInfoCache.onDestroy()
         settingsListener.onDestroy()
