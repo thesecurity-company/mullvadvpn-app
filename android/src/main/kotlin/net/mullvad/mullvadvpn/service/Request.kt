@@ -5,6 +5,7 @@ import android.os.Message
 import android.os.Parcelable
 import java.net.InetAddress
 import kotlinx.parcelize.Parcelize
+import net.mullvad.mullvadvpn.model.LocationConstraint
 import net.mullvad.mullvadvpn.util.ParcelableInetAddress
 import org.joda.time.DateTime
 
@@ -71,6 +72,9 @@ sealed class Request : Parcelable {
 
     @Parcelize
     class SetEnableSplitTunneling(val enable: Boolean) : Request(), Parcelable
+
+    @Parcelize
+    class SetRelayLocation(val relayLocation: LocationConstraint?) : Request(), Parcelable
 
     @Parcelize
     class SetWireGuardMtu(val mtu: Int?) : Request(), Parcelable
