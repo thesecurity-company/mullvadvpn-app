@@ -52,6 +52,12 @@ class ServiceHandler(
             }
         }
 
+    init {
+        splitTunneling.onChange.subscribe(this) { excludedApps ->
+            sendEvent(Event.SplitTunnelingUpdate(excludedApps))
+        }
+    }
+
     override fun handleMessage(message: Message) {
         val request = Request.fromMessage(message)
 
@@ -93,6 +99,8 @@ class ServiceHandler(
         keyStatusListener.onDestroy()
         locationInfoCache.onDestroy()
         settingsListener.onDestroy()
+
+        splitTunneling.onChange.unsubscribe(this)
     }
 
     private fun startRegistrator() = GlobalScope.actor<Messenger>(
