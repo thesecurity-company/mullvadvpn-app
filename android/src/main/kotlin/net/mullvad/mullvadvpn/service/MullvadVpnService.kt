@@ -117,6 +117,7 @@ class MullvadVpnService : TalpidVpnService() {
         handler = ServiceHandler(
             Looper.getMainLooper(),
             daemonInstance.intermittentDaemon,
+            connectionProxy,
             connectivityListener,
             splitTunneling
         )
@@ -251,8 +252,6 @@ class MullvadVpnService : TalpidVpnService() {
         }
 
         handlePendingAction(settings)
-
-        handler.locationInfoCache.stateEvents = connectionProxy.onStateChange
 
         if (state == State.Running) {
             instance = ServiceInstance(

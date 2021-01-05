@@ -17,6 +17,7 @@ import net.mullvad.talpid.ConnectivityListener
 class ServiceHandler(
     looper: Looper,
     val intermittentDaemon: Intermittent<MullvadDaemon>,
+    val connectionProxy: ConnectionProxy,
     connectivityListener: ConnectivityListener,
     val splitTunneling: SplitTunneling
 ) : Handler(looper) {
@@ -47,6 +48,8 @@ class ServiceHandler(
 
     val locationInfoCache =
         LocationInfoCache(connectivityListener, settingsListener, intermittentDaemon).apply {
+            stateEvents = connectionProxy.onStateChange
+
             onNewLocation = { location ->
                 sendEvent(Event.NewLocation(location))
             }
