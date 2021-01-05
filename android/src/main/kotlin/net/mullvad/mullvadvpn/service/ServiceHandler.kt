@@ -56,6 +56,10 @@ class ServiceHandler(
         }
 
     init {
+        connectionProxy.onStateChange.subscribe(this) { tunnelState ->
+            sendEvent(Event.TunnelStateChange(tunnelState))
+        }
+
         splitTunneling.onChange.subscribe(this) { excludedApps ->
             sendEvent(Event.SplitTunnelingUpdate(excludedApps))
         }
@@ -103,6 +107,7 @@ class ServiceHandler(
         locationInfoCache.onDestroy()
         settingsListener.onDestroy()
 
+        connectionProxy.onStateChange.unsubscribe(this)
         splitTunneling.onChange.unsubscribe(this)
     }
 
