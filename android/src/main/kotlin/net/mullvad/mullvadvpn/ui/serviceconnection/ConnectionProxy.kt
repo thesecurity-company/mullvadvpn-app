@@ -49,6 +49,10 @@ class ConnectionProxy(val connection: Messenger, eventDispatcher: EventDispatche
         }
     }
 
+    fun sendVpnPermission(vpnPermission: Boolean) {
+        connection.send(Request.VpnPermissionResponse(vpnPermission).message)
+    }
+
     fun onDestroy() {
         onStateChange.unsubscribeAll()
         onUiStateChange.unsubscribeAll()
