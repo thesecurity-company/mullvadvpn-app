@@ -69,7 +69,9 @@ class ServiceHandler(
         val request = Request.fromMessage(message)
 
         when (request) {
+            is Request.Connect -> connectionProxy.connect()
             is Request.CreateAccount -> accountCache.createNewAccount()
+            is Request.Disconnect -> connectionProxy.disconnect()
             is Request.ExcludeApp -> {
                 request.packageName?.let { packageName ->
                     splitTunneling.excludeApp(packageName)
@@ -87,6 +89,7 @@ class ServiceHandler(
             is Request.Login -> request.account?.let { account -> accountCache.login(account) }
             is Request.Logout -> accountCache.logout()
             is Request.PersistExcludedApps -> splitTunneling.persist()
+            is Request.Reconnect -> connectionProxy.reconnect()
             is Request.RegisterListener -> registrationQueue.sendBlocking(message.replyTo)
             is Request.RemoveAccountFromHistory -> {
                 request.account?.let { account ->

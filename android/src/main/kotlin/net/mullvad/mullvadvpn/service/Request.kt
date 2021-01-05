@@ -8,7 +8,13 @@ import org.joda.time.DateTime
 
 sealed class Request : Parcelable {
     @Parcelize
+    class Connect : Request(), Parcelable
+
+    @Parcelize
     class CreateAccount : Request(), Parcelable
+
+    @Parcelize
+    class Disconnect : Request(), Parcelable
 
     @Parcelize
     class ExcludeApp(val packageName: String?) : Request(), Parcelable
@@ -30,6 +36,9 @@ sealed class Request : Parcelable {
 
     @Parcelize
     class PersistExcludedApps : Request(), Parcelable
+
+    @Parcelize
+    class Reconnect : Request(), Parcelable
 
     @Parcelize
     class RegisterListener : Request(), Parcelable
