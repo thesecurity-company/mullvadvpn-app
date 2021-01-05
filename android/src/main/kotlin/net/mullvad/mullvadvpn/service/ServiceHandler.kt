@@ -55,6 +55,8 @@ class ServiceHandler(
             }
         }
 
+    var customDns: CustomDns? = null
+
     init {
         connectionProxy.onStateChange.subscribe(this) { tunnelState ->
             sendEvent(Event.TunnelStateChange(tunnelState))
@@ -69,6 +71,7 @@ class ServiceHandler(
         val request = Request.fromMessage(message)
 
         when (request) {
+            is Request.AddCustomDnsServer -> customDns?.addDnsServer(request.address)
             is Request.Connect -> connectionProxy.connect()
             is Request.CreateAccount -> accountCache.createNewAccount()
             is Request.Disconnect -> connectionProxy.disconnect()
@@ -94,6 +97,17 @@ class ServiceHandler(
             is Request.RemoveAccountFromHistory -> {
                 request.account?.let { account ->
                     accountCache.removeAccountFromHistory(account)
+                }
+            }
+            is Request.RemoveCustomDnsServer -> customDns?.removeDnsServer(request.address)
+            is Request.ReplaceCustomDnsServer -> {
+                customDns?.replaceDnsServer(request.oldAddress, request.newAddress)
+            }
+            is Request.SetEnableCustomDns -> {
+                if (request.enable) {
+                    customDns?.enable()
+                } else {
+                    customDns?.disable()
                 }
             }
             is Request.SetEnableSplitTunneling -> splitTunneling.enabled = request.enable
