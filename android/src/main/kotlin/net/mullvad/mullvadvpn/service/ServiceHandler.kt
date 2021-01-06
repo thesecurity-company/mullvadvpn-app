@@ -24,8 +24,6 @@ class ServiceHandler(
     private val listeners = mutableListOf<Messenger>()
     private val registrationQueue = startRegistrator()
 
-    private var version: String? = null
-
     val settingsListener = SettingsListener(intermittentDaemon).apply {
         subscribe(this@ServiceHandler) { settings ->
             sendEvent(Event.SettingsUpdate(settings))
@@ -39,6 +37,16 @@ class ServiceHandler(
 
         onLoginStatusChange.subscribe(this@ServiceHandler) { status ->
             sendEvent(Event.LoginStatus(status))
+        }
+    }
+
+    val appVersionInfoCache = AppVersionInfoCache(intermittentDaemon).apply {
+        currentVersionNotifier.subscribe(this@ServiceHandler) { currentVersion ->
+            sendEvent(Event.CurrentVersion(currentVersion))
+        }
+
+        appVersionInfoNotifier.subscribe(this@ServiceHandler) { appVersionInfo ->
+            sendEvent(Event.AppVersionInfo(appVersionInfo))
         }
     }
 
@@ -66,13 +74,6 @@ class ServiceHandler(
 
         splitTunneling.onChange.subscribe(this) { excludedApps ->
             sendEvent(Event.SplitTunnelingUpdate(excludedApps))
-        }
-
-        intermittentDaemon.registerListener(this) { newDaemon ->
-            if (version == null && newDaemon != null) {
-                version = newDaemon.getCurrentVersion()
-                sendEvent(Event.CurrentVersion(version))
-            }
         }
     }
 
@@ -126,6 +127,7 @@ class ServiceHandler(
         registrationQueue.close()
 
         accountCache.onDestroy()
+        appVersionInfoCache.onDestroy()
         customDns.onDestroy()
         keyStatusListener.onDestroy()
         locationInfoCache.onDestroy()
@@ -162,7 +164,8 @@ class ServiceHandler(
             send(Event.NewLocation(locationInfoCache.location).message)
             send(Event.WireGuardKeyStatus(keyStatusListener.keyStatus).message)
             send(Event.SplitTunnelingUpdate(splitTunneling.onChange.latestEvent).message)
-            send(Event.CurrentVersion(version).message)
+            send(Event.CurrentVersion(appVersionInfoCache.currentVersion).message)
+            send(Event.AppVersionInfo(appVersionInfoCache.appVersionInfo).message)
             send(Event.ListenerReady().message)
         }
     }
