@@ -52,21 +52,11 @@ class MullvadVpnService : TalpidVpnService() {
 
     private var setUpDaemonJob: Job? = null
 
-    private var instance by observable<ServiceInstance?>(null) { _, oldInstance, newInstance ->
-        if (newInstance != oldInstance) {
-            accountExpiryNotification = newInstance?.let { instance ->
-                AccountExpiryNotification(this, instance.daemon, handler.accountCache)
-            }
-
-            serviceNotifier.notify(newInstance)
-        }
+    private var instance by observable<ServiceInstance?>(null) { _, _, newInstance ->
+        serviceNotifier.notifyIfChanged(newInstance)
     }
 
-    private var accountExpiryNotification by observable<AccountExpiryNotification?>(null) {
-        _, oldNotification, _ ->
-        oldNotification?.onDestroy()
-    }
-
+    private lateinit var accountExpiryNotification: AccountExpiryNotification
     private lateinit var connectionProxy: ConnectionProxy
     private lateinit var daemonInstance: DaemonInstance
     private lateinit var handler: ServiceHandler
@@ -127,6 +117,9 @@ class MullvadVpnService : TalpidVpnService() {
                 acknowledgeStartForegroundService()
                 accountNumberEvents = handler.settingsListener.accountNumberNotifier
             }
+
+        accountExpiryNotification =
+            AccountExpiryNotification(this, daemonInstance.intermittentDaemon, handler.accountCache)
 
         daemonInstance.apply {
             intermittentDaemon.registerListener(this@MullvadVpnService) { daemon ->
@@ -198,6 +191,7 @@ class MullvadVpnService : TalpidVpnService() {
     override fun onDestroy() {
         Log.d(TAG, "Service has stopped")
         state = State.Stopped
+        accountExpiryNotification.onDestroy()
         notificationManager.onDestroy()
         daemonInstance.onDestroy()
         connectionProxy.onDestroy()
