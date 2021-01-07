@@ -52,6 +52,12 @@ class ServiceHandler(
         }
     }
 
+    val authTokenCache = AuthTokenCache().apply {
+        authTokenNotifier.subscribe(this@ServiceHandler) { authToken ->
+            sendEvent(Event.AuthToken(authToken))
+        }
+    }
+
     val customDns = CustomDns(settingsListener, intermittentDaemon)
 
     val keyStatusListener = KeyStatusListener(intermittentDaemon).apply {
@@ -99,6 +105,7 @@ class ServiceHandler(
                 }
             }
             is Request.FetchAccountExpiry -> accountCache.fetchAccountExpiry()
+            is Request.FetchAuthToken -> authTokenCache.fetchNewToken()
             is Request.IncludeApp -> {
                 request.packageName?.let { packageName ->
                     splitTunneling.includeApp(packageName)
@@ -136,6 +143,7 @@ class ServiceHandler(
 
         accountCache.onDestroy()
         appVersionInfoCache.onDestroy()
+        authTokenCache.onDestroy()
         customDns.onDestroy()
         keyStatusListener.onDestroy()
         locationInfoCache.onDestroy()
@@ -176,6 +184,7 @@ class ServiceHandler(
             send(Event.CurrentVersion(appVersionInfoCache.currentVersion).message)
             send(Event.AppVersionInfo(appVersionInfoCache.appVersionInfo).message)
             send(Event.NewRelayList(relayListListener.relayList).message)
+            send(Event.AuthToken(authTokenCache.authToken).message)
             send(Event.ListenerReady().message)
         }
     }
