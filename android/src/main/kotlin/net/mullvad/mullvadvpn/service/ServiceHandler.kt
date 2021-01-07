@@ -69,6 +69,12 @@ class ServiceHandler(
             }
         }
 
+    val relayListListener = RelayListListener(intermittentDaemon).apply {
+        relayListNotifier.subscribe(this@ServiceHandler) { relayList ->
+            sendEvent(Event.NewRelayList(relayList))
+        }
+    }
+
     init {
         connectionProxy.onStateChange.subscribe(this) { tunnelState ->
             sendEvent(Event.TunnelStateChange(tunnelState))
@@ -133,6 +139,7 @@ class ServiceHandler(
         customDns.onDestroy()
         keyStatusListener.onDestroy()
         locationInfoCache.onDestroy()
+        relayListListener.onDestroy()
         settingsListener.onDestroy()
 
         connectionProxy.onStateChange.unsubscribe(this)
@@ -168,6 +175,7 @@ class ServiceHandler(
             send(Event.SplitTunnelingUpdate(splitTunneling.onChange.latestEvent).message)
             send(Event.CurrentVersion(appVersionInfoCache.currentVersion).message)
             send(Event.AppVersionInfo(appVersionInfoCache.appVersionInfo).message)
+            send(Event.NewRelayList(relayListListener.relayList).message)
             send(Event.ListenerReady().message)
         }
     }
