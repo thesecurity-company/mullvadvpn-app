@@ -71,6 +71,7 @@ class MullvadVpnService : TalpidVpnService() {
     }
 
     private lateinit var daemonInstance: DaemonInstance
+    private lateinit var handler: ServiceHandler
     private lateinit var keyguardManager: KeyguardManager
     private lateinit var messenger: Messenger
     private lateinit var notificationManager: ForegroundNotificationManager
@@ -78,7 +79,7 @@ class MullvadVpnService : TalpidVpnService() {
 
     private var pendingAction by observable<PendingAction?>(null) { _, _, _ ->
         instance?.let { activeInstance ->
-            activeInstance.settingsListener.settings?.let { currentSettings ->
+            handler.settingsListener.settings?.let { currentSettings ->
                 handlePendingAction(activeInstance.connectionProxy, currentSettings)
             }
         }
@@ -100,15 +101,17 @@ class MullvadVpnService : TalpidVpnService() {
 
         initializeSplitTunneling()
 
+        daemonInstance = DaemonInstance(this)
         keyguardManager = getSystemService(Context.KEYGUARD_SERVICE) as KeyguardManager
         notificationManager = ForegroundNotificationManager(this, serviceNotifier, keyguardManager)
         tunnelStateUpdater = TunnelStateUpdater(this, serviceNotifier)
 
-        messenger = Messenger(ServiceHandler(Looper.getMainLooper()))
+        handler = ServiceHandler(Looper.getMainLooper(), daemonInstance.intermittentDaemon)
+        messenger = Messenger(handler)
 
         notificationManager.acknowledgeStartForegroundService()
 
-        daemonInstance = DaemonInstance(this).apply{
+        daemonInstance.apply {
             intermittentDaemon.registerListener(this@MullvadVpnService) { daemon ->
                 handleDaemonInstance(daemon)
             }
@@ -230,9 +233,8 @@ class MullvadVpnService : TalpidVpnService() {
     }
 
     private suspend fun setUpInstance(daemon: MullvadDaemon, settings: Settings) {
-        val settingsListener = SettingsListener(daemonInstance.intermittentDaemon)
         val connectionProxy = ConnectionProxy(this, daemon)
-        val customDns = CustomDns(daemon, settingsListener)
+        val customDns = CustomDns(daemon, handler.settingsListener)
         val splitTunneling = splitTunneling.await()
 
         splitTunneling.onChange = { excludedApps ->
@@ -250,7 +252,7 @@ class MullvadVpnService : TalpidVpnService() {
                 connectionProxy,
                 connectivityListener,
                 customDns,
-                settingsListener,
+                handler.settingsListener,
                 splitTunneling
             )
         }
