@@ -66,14 +66,16 @@ class ServiceHandler(
         }
     }
 
-    val locationInfoCache =
-        LocationInfoCache(connectivityListener, settingsListener, intermittentDaemon).apply {
-            stateEvents = connectionProxy.onStateChange
-
-            onNewLocation = { location ->
-                sendEvent(Event.NewLocation(location))
-            }
+    val locationInfoCache = LocationInfoCache(
+        connectionProxy,
+        connectivityListener,
+        settingsListener,
+        intermittentDaemon
+    ).apply {
+        onNewLocation = { location ->
+            sendEvent(Event.NewLocation(location))
         }
+    }
 
     val relayListListener = RelayListListener(intermittentDaemon).apply {
         relayListNotifier.subscribe(this@ServiceHandler) { relayList ->
