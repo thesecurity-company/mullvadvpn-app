@@ -15,6 +15,7 @@ import net.mullvad.talpid.util.EventNotifier
 class SettingsListener(val daemon: Intermittent<MullvadDaemon>) {
     private sealed class Command {
         class SetAllowLan(val allow: Boolean) : Command()
+        class SetAutoConnect(val autoConnect: Boolean) : Command()
         class SetWireGuardMtu(val mtu: Int?) : Command()
     }
 
@@ -31,6 +32,10 @@ class SettingsListener(val daemon: Intermittent<MullvadDaemon>) {
     var allowLan: Boolean
         get() = settings?.allowLan ?: false
         set(value) = commandChannel.sendBlocking(Command.SetAllowLan(value))
+
+    var autoConnect: Boolean
+        get() = settings?.autoConnect ?: false
+        set(value) = commandChannel.sendBlocking(Command.SetAutoConnect(value))
 
     var wireguardMtu: Int?
         get() = settings?.tunnelOptions?.wireguard?.mtu
@@ -101,6 +106,7 @@ class SettingsListener(val daemon: Intermittent<MullvadDaemon>) {
 
                 when (command) {
                     is Command.SetAllowLan -> daemon.await().setAllowLan(command.allow)
+                    is Command.SetAutoConnect -> daemon.await().setAutoConnect(command.autoConnect)
                     is Command.SetWireGuardMtu -> daemon.await().setWireguardMtu(command.mtu)
                 }
             }
