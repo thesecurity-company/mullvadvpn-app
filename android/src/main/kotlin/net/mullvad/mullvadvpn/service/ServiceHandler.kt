@@ -40,6 +40,8 @@ class ServiceHandler(
         }
     }
 
+    val customDns = CustomDns(settingsListener, intermittentDaemon)
+
     val keyStatusListener = KeyStatusListener(intermittentDaemon).apply {
         onKeyStatusChange.subscribe(this@ServiceHandler) { keyStatus ->
             sendEvent(Event.WireGuardKeyStatus(keyStatus))
@@ -55,8 +57,6 @@ class ServiceHandler(
             }
         }
 
-    var customDns: CustomDns? = null
-
     init {
         connectionProxy.onStateChange.subscribe(this) { tunnelState ->
             sendEvent(Event.TunnelStateChange(tunnelState))
@@ -71,7 +71,7 @@ class ServiceHandler(
         val request = Request.fromMessage(message)
 
         when (request) {
-            is Request.AddCustomDnsServer -> customDns?.addDnsServer(request.address)
+            is Request.AddCustomDnsServer -> customDns.addDnsServer(request.address)
             is Request.Connect -> connectionProxy.connect()
             is Request.CreateAccount -> accountCache.createNewAccount()
             is Request.Disconnect -> connectionProxy.disconnect()
@@ -99,11 +99,11 @@ class ServiceHandler(
                     accountCache.removeAccountFromHistory(account)
                 }
             }
-            is Request.RemoveCustomDnsServer -> customDns?.removeDnsServer(request.address)
+            is Request.RemoveCustomDnsServer -> customDns.removeDnsServer(request.address)
             is Request.ReplaceCustomDnsServer -> {
-                customDns?.replaceDnsServer(request.oldAddress, request.newAddress)
+                customDns.replaceDnsServer(request.oldAddress, request.newAddress)
             }
-            is Request.SetEnableCustomDns -> customDns?.setEnabled(request.enable)
+            is Request.SetEnableCustomDns -> customDns.setEnabled(request.enable)
             is Request.SetEnableSplitTunneling -> splitTunneling.enabled = request.enable
             is Request.VpnPermissionResponse -> {
                 connectionProxy.vpnPermission.spawnUpdate(request.vpnPermission)
@@ -117,6 +117,7 @@ class ServiceHandler(
         registrationQueue.close()
 
         accountCache.onDestroy()
+        customDns.onDestroy()
         keyStatusListener.onDestroy()
         locationInfoCache.onDestroy()
         settingsListener.onDestroy()
