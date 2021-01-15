@@ -51,11 +51,11 @@ class AccountCache(
         }
     }
 
-    suspend fun createNewAccount(): String? {
+    suspend fun createNewAccount() {
         newlyCreatedAccount = true
         createdAccountExpiry = null
 
-        return daemon.await().createNewAccount()
+        daemon.await().createNewAccount()
     }
 
     suspend fun login(account: String) {
