@@ -83,6 +83,10 @@ class ServiceHandler(
         }
     }
 
+    val voucherRedeemer = VoucherRedeemer(intermittentDaemon) { voucher, result ->
+        sendEvent(Event.VoucherSubmissionResult(voucher, result))
+    }
+
     init {
         connectionProxy.onStateChange.subscribe(this) { tunnelState ->
             sendEvent(Event.TunnelStateChange(tunnelState))
@@ -139,6 +143,7 @@ class ServiceHandler(
                 relayListListener.selectedRelayLocation = request.relayLocation
             }
             is Request.SetWireGuardMtu -> settingsListener.wireguardMtu = request.mtu
+            is Request.SubmitVoucher -> voucherRedeemer.submit(request.voucher)
             is Request.VpnPermissionResponse -> {
                 connectionProxy.vpnPermission.spawnUpdate(request.vpnPermission)
             }
@@ -158,6 +163,7 @@ class ServiceHandler(
         locationInfoCache.onDestroy()
         relayListListener.onDestroy()
         settingsListener.onDestroy()
+        voucherRedeemer.onDestroy()
 
         connectionProxy.onStateChange.unsubscribe(this)
         splitTunneling.onChange.unsubscribe(this)
