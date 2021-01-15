@@ -1,6 +1,6 @@
 import { ICurrentAppVersionInfo } from '../main/index';
 import { IWindowShapeParameters } from '../main/window-controller';
-import { ILinuxSplitTunnelingApplication } from '../shared/application-types';
+import { IApplication, ILinuxSplitTunnelingApplication } from '../shared/application-types';
 import {
   AccountToken,
   BridgeSettings,
@@ -52,6 +52,7 @@ export interface IAppStateSnapshot {
   upgradeVersion: IAppVersionInfo;
   guiSettings: IGuiSettingsState;
   wireguardPublicKey?: IWireguardPublicKey;
+  windowsSplitTunnelingApplications?: IApplication[];
 }
 
 // The different types of requests are:
@@ -180,16 +181,23 @@ const ipc = {
     generateKey: invoke<void, KeygenEvent>(),
     verifyKey: invoke<void, boolean>(),
   },
-  splitTunneling: {
-    getApplications: invoke<void, ILinuxSplitTunnelingApplication[]>(),
-    launchApplication: invoke<ILinuxSplitTunnelingApplication | string, void>(),
-  },
   problemReport: {
     collectLogs: invoke<string[], string>(),
     sendReport: invoke<{ email: string; message: string; savedReport: string }, void>(),
   },
   logging: {
     log: send<ILogEntry>(),
+  },
+  linuxSplitTunneling: {
+    getApplications: invoke<void, ILinuxSplitTunnelingApplication[]>(),
+    launchApplication: invoke<ILinuxSplitTunnelingApplication | string, void>(),
+  },
+  windowsSplitTunneling: {
+    '': notifyRenderer<IApplication[]>(),
+    setState: invoke<boolean, void>(),
+    getApplications: invoke<void, IApplication[]>(),
+    addApplication: invoke<IApplication | string, void>(),
+    removeApplication: invoke<IApplication | string, void>(),
   },
 };
 
