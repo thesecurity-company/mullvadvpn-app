@@ -28,6 +28,7 @@ Line wrap the file at 100 chars.                                              Th
   vulnerability checks.
 - Add `TALPID_DISABLE_OFFLINE_MONITOR` environment variable to allow users to disable offline
   detection.
+- Add option to connect to WireGuard relays over IPv6.
 
 #### Android
 - Allow to configure the tunnel to use custom DNS servers.
