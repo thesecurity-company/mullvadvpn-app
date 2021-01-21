@@ -5,7 +5,6 @@ import android.os.Messenger
 import android.os.RemoteException
 import android.util.Log
 import net.mullvad.mullvadvpn.service.Request
-import net.mullvad.mullvadvpn.service.ServiceInstance
 import net.mullvad.mullvadvpn.ui.serviceconnection.AccountCache
 import net.mullvad.mullvadvpn.ui.serviceconnection.AppVersionInfoCache
 import net.mullvad.mullvadvpn.ui.serviceconnection.AuthTokenCache
@@ -19,24 +18,24 @@ import net.mullvad.mullvadvpn.ui.serviceconnection.SettingsListener
 import net.mullvad.mullvadvpn.ui.serviceconnection.SplitTunneling
 import net.mullvad.mullvadvpn.ui.serviceconnection.VoucherRedeemer
 
-class ServiceConnection(private val service: ServiceInstance) {
+class ServiceConnection(connection: Messenger) {
     val dispatcher = EventDispatcher(Looper.getMainLooper())
 
-    val accountCache = AccountCache(service.messenger, dispatcher)
-    val authTokenCache = AuthTokenCache(service.messenger, dispatcher)
-    val connectionProxy = ConnectionProxy(service.messenger, dispatcher)
-    val keyStatusListener = KeyStatusListener(service.messenger, dispatcher)
+    val accountCache = AccountCache(connection, dispatcher)
+    val authTokenCache = AuthTokenCache(connection, dispatcher)
+    val connectionProxy = ConnectionProxy(connection, dispatcher)
+    val keyStatusListener = KeyStatusListener(connection, dispatcher)
     val locationInfoCache = LocationInfoCache(dispatcher)
-    val settingsListener = SettingsListener(service.messenger, dispatcher)
-    val splitTunneling = SplitTunneling(service.messenger, dispatcher)
-    val voucherRedeemer = VoucherRedeemer(service.messenger, dispatcher)
+    val settingsListener = SettingsListener(connection, dispatcher)
+    val splitTunneling = SplitTunneling(connection, dispatcher)
+    val voucherRedeemer = VoucherRedeemer(connection, dispatcher)
 
     val appVersionInfoCache = AppVersionInfoCache(dispatcher, settingsListener)
-    val customDns = CustomDns(service.messenger, settingsListener)
-    var relayListListener = RelayListListener(service.messenger, dispatcher, settingsListener)
+    val customDns = CustomDns(connection, settingsListener)
+    var relayListListener = RelayListListener(connection, dispatcher, settingsListener)
 
     init {
-        registerListener()
+        registerListener(connection)
     }
 
     fun onDestroy() {
@@ -55,13 +54,13 @@ class ServiceConnection(private val service: ServiceInstance) {
         relayListListener.onDestroy()
     }
 
-    private fun registerListener() {
+    private fun registerListener(connection: Messenger) {
         val message = Request.RegisterListener().message.apply {
             replyTo = Messenger(dispatcher)
         }
 
         try {
-            service.messenger.send(message)
+            connection.send(message)
         } catch (exception: RemoteException) {
             Log.e("mullvad", "Failed to register listener for service events", exception)
         }
