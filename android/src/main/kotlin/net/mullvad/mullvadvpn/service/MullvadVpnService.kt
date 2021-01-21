@@ -4,7 +4,6 @@ import android.app.KeyguardManager
 import android.content.Context
 import android.content.Intent
 import android.net.VpnService
-import android.os.Binder
 import android.os.IBinder
 import android.os.Looper
 import android.os.Messenger
@@ -45,7 +44,6 @@ class MullvadVpnService : TalpidVpnService() {
         Stopped,
     }
 
-    private val binder = LocalBinder()
     private val serviceNotifier = EventNotifier<ServiceInstance?>(null)
 
     private var state = State.Running
@@ -198,15 +196,6 @@ class MullvadVpnService : TalpidVpnService() {
         connectionProxy.onDestroy()
         instance = null
         super.onDestroy()
-    }
-
-    inner class LocalBinder : Binder() {
-        val serviceNotifier
-            get() = this@MullvadVpnService.serviceNotifier
-
-        var isUiVisible
-            get() = this@MullvadVpnService.isUiVisible
-            set(value) { this@MullvadVpnService.isUiVisible = value }
     }
 
     private fun handleDaemonInstance(daemon: MullvadDaemon?) {
