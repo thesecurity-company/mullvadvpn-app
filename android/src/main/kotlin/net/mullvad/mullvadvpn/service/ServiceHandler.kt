@@ -17,7 +17,8 @@ import net.mullvad.talpid.ConnectivityListener
 class ServiceHandler(
     looper: Looper,
     val intermittentDaemon: Intermittent<MullvadDaemon>,
-    connectivityListener: ConnectivityListener
+    connectivityListener: ConnectivityListener,
+    val splitTunneling: SplitTunneling
 ) : Handler(looper) {
     private val listeners = mutableListOf<Messenger>()
     private val registrationQueue = startRegistrator()
