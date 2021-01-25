@@ -1,5 +1,6 @@
 package net.mullvad.mullvadvpn.service
 
+import android.content.Context
 import android.os.DeadObjectException
 import android.os.Handler
 import android.os.Looper
@@ -15,6 +16,7 @@ import net.mullvad.mullvadvpn.util.Intermittent
 import net.mullvad.talpid.ConnectivityListener
 
 class ServiceHandler(
+    context: Context,
     looper: Looper,
     val intermittentDaemon: Intermittent<MullvadDaemon>,
     val connectionProxy: ConnectionProxy,
@@ -40,7 +42,7 @@ class ServiceHandler(
         }
     }
 
-    val appVersionInfoCache = AppVersionInfoCache(intermittentDaemon).apply {
+    val appVersionInfoCache = AppVersionInfoCache(context, intermittentDaemon).apply {
         currentVersionNotifier.subscribe(this@ServiceHandler) { currentVersion ->
             sendEvent(Event.CurrentVersion(currentVersion))
         }
