@@ -18,7 +18,6 @@ import net.mullvad.mullvadvpn.service.notifications.AccountExpiryNotification
 import net.mullvad.mullvadvpn.service.tunnelstate.TunnelStateUpdater
 import net.mullvad.mullvadvpn.ui.MainActivity
 import net.mullvad.talpid.TalpidVpnService
-import net.mullvad.talpid.util.EventNotifier
 
 class MullvadVpnService : TalpidVpnService() {
     companion object {
@@ -44,15 +43,9 @@ class MullvadVpnService : TalpidVpnService() {
         Stopped,
     }
 
-    private val serviceNotifier = EventNotifier<ServiceInstance?>(null)
-
     private var state = State.Running
 
     private var setUpDaemonJob: Job? = null
-
-    private var instance by observable<ServiceInstance?>(null) { _, _, newInstance ->
-        serviceNotifier.notifyIfChanged(newInstance)
-    }
 
     private lateinit var accountExpiryNotification: AccountExpiryNotification
     private lateinit var connectionProxy: ConnectionProxy
@@ -64,12 +57,8 @@ class MullvadVpnService : TalpidVpnService() {
     private lateinit var tunnelStateUpdater: TunnelStateUpdater
 
     private var pendingAction by observable<PendingAction?>(null) { _, _, _ ->
-        // The service instance awaits the split tunneling initialization, which also starts the
-        // handler. So if the instance is not null, the handler has certainly been initialized.
-        if (instance != null) {
-            handler.settingsListener.settings?.let { settings ->
-                handlePendingAction(settings)
-            }
+        handler.settingsListener.settings?.let { settings ->
+            handlePendingAction(settings)
         }
     }
 
@@ -194,7 +183,6 @@ class MullvadVpnService : TalpidVpnService() {
         notificationManager.onDestroy()
         daemonInstance.onDestroy()
         connectionProxy.onDestroy()
-        instance = null
         super.onDestroy()
     }
 
@@ -205,7 +193,6 @@ class MullvadVpnService : TalpidVpnService() {
             setUpDaemonJob = setUpDaemon(daemon)
         } else {
             Log.d(TAG, "Daemon has stopped")
-            instance = null
 
             if (state == State.Running) {
                 restart()
@@ -218,18 +205,10 @@ class MullvadVpnService : TalpidVpnService() {
             val settings = daemon.getSettings()
 
             if (settings != null) {
-                setUpInstance(settings)
+                handlePendingAction(settings)
             } else {
                 restart()
             }
-        }
-    }
-
-    private suspend fun setUpInstance(settings: Settings) {
-        handlePendingAction(settings)
-
-        if (state == State.Running) {
-            instance = ServiceInstance(messenger)
         }
     }
 
