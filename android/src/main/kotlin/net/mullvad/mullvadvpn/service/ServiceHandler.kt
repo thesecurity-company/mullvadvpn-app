@@ -5,13 +5,20 @@ import android.os.Handler
 import android.os.Looper
 import android.os.Message
 import android.os.Messenger
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.channels.ClosedReceiveChannelException
+import kotlinx.coroutines.channels.actor
+import kotlinx.coroutines.channels.sendBlocking
 import net.mullvad.mullvadvpn.util.Intermittent
 
 class ServiceHandler(
     looper: Looper,
-    intermittentDaemon: Intermittent<MullvadDaemon>
+    val intermittentDaemon: Intermittent<MullvadDaemon>
 ) : Handler(looper) {
     private val listeners = mutableListOf<Messenger>()
+    private val registrationQueue = startRegistrator()
 
     val settingsListener = SettingsListener(intermittentDaemon)
 
@@ -19,12 +26,31 @@ class ServiceHandler(
         val request = Request.fromMessage(message)
 
         when (request) {
-            is Request.RegisterListener -> registerListener(message.replyTo)
+            is Request.RegisterListener -> registrationQueue.sendBlocking(message.replyTo)
         }
     }
 
     fun onDestroy() {
+        registrationQueue.close()
+
         settingsListener.onDestroy()
+    }
+
+    private fun startRegistrator() = GlobalScope.actor<Messenger>(
+        Dispatchers.Default,
+        Channel.UNLIMITED
+    ) {
+        try {
+            while (true) {
+                val listener = channel.receive()
+
+                intermittentDaemon.await()
+
+                registerListener(listener)
+            }
+        } catch (exception: ClosedReceiveChannelException) {
+            // Registration queue closed; stop registrator
+        }
     }
 
     private fun registerListener(listener: Messenger) {
