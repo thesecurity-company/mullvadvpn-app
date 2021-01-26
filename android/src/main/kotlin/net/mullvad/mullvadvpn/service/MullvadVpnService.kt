@@ -111,6 +111,7 @@ class MullvadVpnService : TalpidVpnService() {
             onChange.subscribe(this@MullvadVpnService) { excludedApps ->
                 disallowedApps = excludedApps
                 markTunAsStale()
+                connectionProxy.reconnect()
             }
         }
 
@@ -244,12 +245,6 @@ class MullvadVpnService : TalpidVpnService() {
 
     private suspend fun setUpInstance(daemon: MullvadDaemon, settings: Settings) {
         val customDns = CustomDns(daemon, handler.settingsListener)
-
-        splitTunneling.onChange.subscribe(this@MullvadVpnService) { excludedApps ->
-            disallowedApps = excludedApps
-            markTunAsStale()
-            connectionProxy.reconnect()
-        }
 
         handlePendingAction(settings)
 
